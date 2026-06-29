@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sportdle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Stadium palette */
+      --night:       #060c14;   /* deep night sky behind the upper deck */
+      --stands:      #0b1520;   /* dark blue of empty seats in shadow */
+      --turf-edge:   #0d1f0f;   /* deep turf green at the boundary */
+      --field:       #132a15;   /* lit field green */
+      --concrete:    #111c2a;   /* concourse / card surface */
+      --concrete-hi: #172334;   /* slightly lifted surface */
+      --stripe:      #0f2540;   /* faint yard-line stripe */
+      --floodlight:  #e8f0ff;   /* harsh white floodlight */
+      --floodlight2: #b0c4e8;   /* secondary floodlight, slightly cooled */
+      --gold:        #f0b429;   /* NFL trophy gold */
+      --gold-dim:    #7a5a10;   /* muted gold for borders */
+      --turf-green:  #2ecc6a;   /* bright turf accent */
+      --turf-dim:    #174d2b;   /* dim turf for borders */
+      --red-zone:    #c0392b;   /* end zone red */
+      --muted:       #4a6080;   /* muted text */
+      --radius: 6px;
+      /* distance tier colors — vivid on dark bg */
+      --yellow: #f0c040;   --yellow-bg: #2a1f00;  --yellow-border: #7a5a10;
+      --orange: #f07030;   --orange-bg: #2a1000;  --orange-border: #7a3010;
+      --red:    #e04040;   --red-bg:    #2a0808;  --red-border:    #7a1818;
+      --brown:  #c08050;   --brown-bg:  #1e1008;  --brown-border:  #6a4020;
+      --black-fg: #8090a0; --black-bg:  #0d1520;  --black-border:  #2a3a4a;
+      --success:        #2ecc6a;
+      --success-bg:     #0a2018;
+      --success-border: #174d2b;
+      --success-text:   #2ecc6a;
+    }
+
+    body {
+      background-color: var(--night);
+      background-image:
+        radial-gradient(ellipse 120% 40% at 50% 0%, #1a3a6a 0%, transparent 60%),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 55px,
+          rgba(255,255,255,0.015) 55px,
+          rgba(255,255,255,0.015) 56px
+        );
+      color: var(--floodlight);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 5rem;
+    }
+
+    #app { width: 100%; max-width: 580px; }
+
+    /* ── FIELD STRIPE top decoration ── */
+    #app::before {
+      content: '';
+      display: block;
+      height: 3px;
+      background: repeating-linear-gradient(
+        90deg,
+        var(--turf-green) 0px, var(--turf-green) 30px,
+        transparent 30px, transparent 36px
+      );
+      margin-bottom: 1.5rem;
+      opacity: 0.6;
+    }
+
+    /* ── HEADER ── */
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header-icon { font-size: 2.2rem; margin-bottom: 6px; }
+    .header h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--floodlight);
+      line-height: 1;
+    }
+    .header h1 span { color: var(--gold); }
+    .header p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ── SCOREBAR ── */
+    .scorebar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      padding: 10px 16px;
+      background: var(--concrete);
+      border: 1px solid var(--stripe);
+      border-radius: var(--radius);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .score-stat { text-align: center; }
+    .score-stat span {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+
+    /* ── CLUE CARDS ── */
+    .clues { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+    .clue-card {
+      background: var(--concrete);
+      border: 1px solid var(--stripe);
+      border-left: 3px solid var(--turf-dim);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.1rem;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .clue-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--turf-green);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      margin-top: 2px;
+      min-width: 18px;
+    }
+    .clue-body .clue-text {
+      font-size: 14px;
+      color: var(--floodlight2);
+      line-height: 1.6;
+    }
+    .clue-body .clue-sport {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    /* ── GUESS DOTS ── */
+    .dots { display: flex; gap: 8px; margin-bottom: 1rem; align-items: center; }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--stripe);
+      border: 1px solid var(--muted);
+    }
+    .dot.used { background: var(--muted); border-color: var(--muted); }
+    .dot.correct { background: var(--turf-green); border-color: var(--turf-green); }
+
+    /* ── HISTORY PILLS ── */
+    .history { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; margin-bottom: 10px; }
+    .pill {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 3px;
+      border: 1px solid;
+      letter-spacing: 0.5px;
+    }
+    .pill.t-yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
+    .pill.t-orange { background: var(--orange-bg); color: var(--orange); border-color: var(--orange-border); }
+    .pill.t-red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
+    .pill.t-brown  { background: var(--brown-bg);  color: var(--brown);  border-color: var(--brown-border); }
+    .pill.t-black  { background: var(--black-bg);  color: var(--black-fg); border-color: var(--black-border); }
+
+    /* ── FEEDBACK ── */
+    .feedback {
+      font-size: 14px;
+      font-weight: 500;
+      padding: 11px 15px;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      border: 1px solid transparent;
+      display: none;
+      line-height: 1.5;
+      letter-spacing: 0.3px;
+    }
+    .feedback.show { display: block; }
+    .feedback.t-yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
+    .feedback.t-orange { background: var(--orange-bg); color: var(--orange); border-color: var(--orange-border); }
+    .feedback.t-red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
+    .feedback.t-brown  { background: var(--brown-bg);  color: var(--brown);  border-color: var(--brown-border); }
+    .feedback.t-black  { background: var(--black-bg);  color: var(--black-fg); border-color: var(--black-border); }
+
+    /* ── LEGEND ── */
+    .legend { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .legend-item {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .legend-item.t-yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
+    .legend-item.t-orange { background: var(--orange-bg); color: var(--orange); border-color: var(--orange-border); }
+    .legend-item.t-red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
+    .legend-item.t-brown  { background: var(--brown-bg);  color: var(--brown);  border-color: var(--brown-border); }
+    .legend-item.t-black  { background: var(--black-bg);  color: var(--black-fg); border-color: var(--black-border); }
+
+    /* ── GUESS INPUT ── */
+    .guess-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .guess-row { display: flex; gap: 8px; align-items: center; }
+    input[type="number"] {
+      font-size: 30px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      width: 150px;
+      text-align: center;
+      padding: 10px 12px;
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      background: var(--concrete);
+      color: var(--gold);
+      height: 58px;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::placeholder { color: #3a4a5a; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(240,180,41,0.15);
+    }
+    input[type="number"]:disabled { opacity: 0.4; }
+
+    .guess-btn {
+      height: 58px;
+      padding: 0 26px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: var(--turf-green);
+      color: #050e08;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.12s, transform 0.08s;
+    }
+    .guess-btn:hover { opacity: 0.88; }
+    .guess-btn:active { transform: scale(0.97); }
+    .guess-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+    .giveup-btn {
+      font-size: 12px;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 10px;
+      display: block;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px;
+    }
+    .giveup-btn:hover { color: var(--floodlight2); }
+
+    /* ── RESULT / REVEAL CARDS ── */
+    .result-card, .reveal-card {
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      display: none;
+      border: 1px solid transparent;
+    }
+    .result-card.show {
+      display: block;
+      background: var(--success-bg);
+      border-color: var(--success-border);
+    }
+    .reveal-card.show {
+      display: block;
+      background: var(--red-bg);
+      border-color: var(--red-border);
+    }
+
+    .big-year {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 72px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+    .result-card .big-year { color: var(--turf-green); }
+    .reveal-card .big-year { color: var(--red); }
+
+    .result-msg { font-size: 15px; color: var(--floodlight2); }
+    .result-attempts { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .next-btn {
+      margin-top: 16px;
+      padding: 10px 24px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: transparent;
+      border: 1px solid;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .result-card .next-btn { color: var(--turf-green); border-color: var(--turf-dim); }
+    .reveal-card .next-btn { color: var(--red); border-color: var(--red-border); }
+    .next-btn:hover { opacity: 0.7; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-icon">🏆</div>
+    <h1>Sport<span>dle</span></h1>
+  </div>
+
+  <div class="scorebar">
+    <div class="score-stat"><span id="statPlayed">0</span>played</div>
+    <div class="score-stat"><span id="statWon">0</span>won</div>
+    <div class="score-stat"><span id="statStreak">0</span>streak</div>
+    <div class="score-stat"><span id="statAvg">—</span>avg guesses</div>
+  </div>
+
+  <div class="clues" id="clues"></div>
+
+  <div class="legend">
+    <span class="legend-item t-yellow">🟡 1–2 yrs</span>
+    <span class="legend-item t-orange">🟠 3–10 yrs</span>
+    <span class="legend-item t-red">🔴 11–40 yrs</span>
+    <span class="legend-item t-brown">🟤 41–200 yrs</span>
+    <span class="legend-item t-black">⚫ 200+ yrs</span>
+  </div>
+
+  <div class="dots" id="dots"></div>
+  <div class="history" id="history"></div>
+  <div class="feedback" id="feedback"></div>
+
+  <div id="guessArea">
+    <div class="guess-label">What year did all three happen?</div>
+    <div class="guess-row">
+      <input type="number" id="yearInput" placeholder="1966" min="1850" max="2024" />
+      <button class="guess-btn" id="guessBtn" onclick="submitGuess()">Guess</button>
+    </div>
+    <button class="giveup-btn" onclick="giveUp()">Give up &amp; reveal</button>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="big-year" id="resultYear"></div>
+    <div class="result-msg" id="resultMsg"></div>
+    <div class="result-attempts" id="resultAttempts"></div>
+    <button class="next-btn" onclick="nextPuzzle()">Next puzzle →</button>
+  </div>
+
+  <div class="reveal-card" id="revealCard">
+    <div class="big-year" id="revealYear"></div>
+    <div class="result-msg">Better luck next time!</div>
+    <button class="next-btn" onclick="nextPuzzle()">Try another →</button>
+  </div>
+</div>
+
+<script>
+const PUZZLES = [
+  {
+    year: 1859,
+    clues: [
+      { sport: "Baseball", text: "The first recorded amateur baseball championship is held in New York, with the Brooklyn Atlantics claiming the title." },
+      { sport: "Cricket", text: "The first English cricket team tours North America, playing matches in the United States and Canada." },
+      { sport: "Horse Racing", text: "Lexington, the most famous American racehorse of the 19th century, retires having earned more money than any horse in US history." }
+    ]
+  },
+  {
+    year: 1863,
+    clues: [
+      { sport: "Soccer", text: "The Football Association is founded in England, establishing the first official rules of association football — the birth of the modern game." },
+      { sport: "Horse Racing", text: "The Grand National is won by Emblem, trained by Tom Olliver, in front of large crowds at Aintree." },
+      { sport: "Baseball", text: "During the American Civil War, Union Army soldiers spread baseball to new regions, helping popularize the sport across the country." }
+    ]
+  },
+  {
+    year: 1869,
+    clues: [
+      { sport: "Baseball", text: "The Cincinnati Red Stockings become the first openly professional baseball team, completing an undefeated season of 57 wins and 1 tie." },
+      { sport: "Soccer", text: "The first intercollegiate football game in the United States is played between Rutgers and Princeton under rules closer to soccer than American football." },
+      { sport: "Horse Racing", text: "Pretender wins the Epsom Derby, with the race drawing one of its largest crowds of the Victorian era." }
+    ]
+  },
+  {
+    year: 1875,
+    clues: [
+      { sport: "Horse Racing", text: "The first Kentucky Derby is held at Churchill Downs in Louisville, won by Aristides in front of an estimated 10,000 spectators." },
+      { sport: "Tennis", text: "Major Walter Clopton Wingfield patents the equipment and rules for 'Sphairistikè,' the game that evolves into lawn tennis." },
+      { sport: "Swimming", text: "Matthew Webb becomes the first person to swim the English Channel, crossing from Dover to Calais in just under 22 hours." }
+    ]
+  },
+  {
+    year: 1877,
+    clues: [
+      { sport: "Tennis", text: "The first Wimbledon Championships are held at the All England Croquet and Lawn Tennis Club, with Spencer Gore winning the inaugural men's singles title." },
+      { sport: "Cricket", text: "The first-ever Test match in cricket is played between England and Australia in Melbourne, with Australia winning by 45 runs." },
+      { sport: "Horse Racing", text: "Silvio wins the Epsom Derby, the same year the Grand National is won by Austerlitz." }
+    ]
+  },
+  {
+    year: 1882,
+    clues: [
+      { sport: "Cricket", text: "Australia defeat England at The Oval, prompting a mock obituary notice declaring that English cricket had died — giving birth to 'The Ashes.'" },
+      { sport: "Baseball", text: "The American Association begins play as a second major baseball league, competing with the National League and charging only 25 cents admission." },
+      { sport: "Boxing", text: "John L. Sullivan defeats Paddy Ryan in nine rounds to win the World Heavyweight Championship under bare-knuckle rules." }
+    ]
+  },
+  {
+    year: 1888,
+    clues: [
+      { sport: "Soccer", text: "The Football League — the world's first professional football league — is founded in England, with twelve clubs competing in the inaugural season." },
+      { sport: "Athletics", text: "The Amateur Athletic Union (AAU) is founded in the United States, becoming the governing body for amateur sports in America." },
+      { sport: "Cricket", text: "England tour Australia in one of the earliest Ashes series, with Australia winning the series 2–1." }
+    ]
+  },
+  {
+    year: 1903,
+    clues: [
+      { sport: "Cycling", text: "The first Tour de France is held, with Maurice Garin winning the six-stage race covering nearly 2,500 km across France." },
+      { sport: "Baseball", text: "The first modern World Series is played between the Pittsburgh Pirates and Boston Americans, with Boston winning five games to three." },
+      { sport: "Soccer", text: "Bury defeat Derby County 6–0 in the FA Cup Final — still the biggest winning margin in an FA Cup Final." }
+    ]
+  },
+  {
+    year: 1910,
+    clues: [
+      { sport: "Boxing", text: "Jack Johnson defeats James J. Jeffries — 'The Great White Hope' — in the 'Fight of the Century' in Reno, Nevada, triggering race riots across the US." },
+      { sport: "Baseball", text: "President William Howard Taft throws out the first ceremonial first pitch on Opening Day, beginning a presidential tradition." },
+      { sport: "Cycling", text: "The Tour de France crosses the Pyrenees mountains for the first time, with Octave Lapize winning the overall race." }
+    ]
+  },
+  {
+    year: 1914,
+    clues: [
+      { sport: "Baseball", text: "Babe Ruth makes his professional debut, pitching for the Baltimore Orioles of the International League before being sold to the Boston Red Sox mid-season." },
+      { sport: "Boxing", text: "Jack Johnson loses the World Heavyweight Championship to Jess Willard in Havana after 26 rounds in sweltering heat." },
+      { sport: "Tennis", text: "Wimbledon is cancelled due to the outbreak of World War I — it would not resume until 1919." }
+    ]
+  },
+  {
+    year: 1921,
+    clues: [
+      { sport: "Baseball", text: "Babe Ruth hits 59 home runs, breaking his own single-season record set the previous year, as the New York Yankees win their first American League pennant." },
+      { sport: "Boxing", text: "Jack Dempsey defends his heavyweight title against Georges Carpentier in the first boxing match to generate over $1 million in gate receipts." },
+      { sport: "Horse Racing", text: "Man o' War retires having lost only one race in his career, widely regarded as the greatest thoroughbred of his era." }
+    ]
+  },
+  {
+    year: 1923,
+    clues: [
+      { sport: "Soccer", text: "The first FA Cup Final at the new Wembley Stadium draws an estimated 200,000 spectators — far exceeding capacity — with Bolton Wanderers defeating West Ham 2–0." },
+      { sport: "Baseball", text: "Yankee Stadium opens, immediately dubbed 'The House That Ruth Built.' The New York Yankees go on to win their first World Series title the same year." },
+      { sport: "Tennis", text: "Suzanne Lenglen wins the last of her six Wimbledon singles titles, having dominated women's tennis throughout the early 1920s." }
+    ]
+  },
+  {
+    year: 1924,
+    clues: [
+      { sport: "Athletics", text: "Eric Liddell and Harold Abrahams both win gold medals at the Olympics in Paris — their story is later immortalized in the film Chariots of Fire." },
+      { sport: "Soccer", text: "Uruguay wins the Olympic football tournament, their first major international title, showcasing a South American style that astonishes European crowds." },
+      { sport: "Ice Hockey", text: "The Montreal Canadiens win the Stanley Cup, and the Boston Bruins become the first American franchise admitted to the NHL." }
+    ]
+  },
+  {
+    year: 1926,
+    clues: [
+      { sport: "Tennis", text: "Rene Lacoste wins the US National Championships and Wimbledon, cementing his place among the 'Four Musketeers' of French tennis." },
+      { sport: "Swimming", text: "Gertrude Ederle becomes the first woman to swim the English Channel, doing so in a record time that beats all previous male crossings." },
+      { sport: "Baseball", text: "The St. Louis Cardinals defeat the New York Yankees in a seven-game World Series, with Grover Cleveland Alexander striking out Tony Lazzeri with the bases loaded in Game 7." }
+    ]
+  },
+  {
+    year: 1928,
+    clues: [
+      { sport: "Athletics", text: "The Olympics introduce women's track and field events for the first time, with Halina Konopacka winning the discus in a world record throw." },
+      { sport: "Soccer", text: "Uruguay wins the Olympic football gold medal for the second consecutive time, defeating Argentina in the final." },
+      { sport: "Horse Racing", text: "100-to-1 outsider Tipperary Tim wins the Grand National after nearly every other horse falls or is remounted." }
+    ]
+  },
+  {
+    year: 1932,
+    clues: [
+      { sport: "Athletics", text: "Mildred 'Babe' Didrikson wins two gold medals and a silver at the Olympics, setting world records in the hurdles and javelin, having also qualified in five other events." },
+      { sport: "Baseball", text: "Babe Ruth allegedly 'calls his shot' in Game 3 of the World Series, pointing to center field before hitting a home run to that exact spot against Charlie Root." },
+      { sport: "Boxing", text: "Jack Sharkey defeats Max Schmeling by controversial split decision to win the World Heavyweight Championship at Madison Square Garden Bowl." }
+    ]
+  },
+  {
+    year: 1934,
+    clues: [
+      { sport: "Soccer", text: "Italy win the FIFA World Cup on home soil, defeating Czechoslovakia 2–1 after extra time in the final in Rome." },
+      { sport: "Baseball", text: "The St. Louis Cardinals 'Gas House Gang' win the World Series, with Dizzy Dean winning 30 games during the regular season." },
+      { sport: "Golf", text: "The inaugural Masters Tournament is held at Augusta National Golf Club, with Horton Smith winning by one stroke." }
+    ]
+  },
+  {
+    year: 1937,
+    clues: [
+      { sport: "Boxing", text: "Joe Louis knocks out James J. Braddock in eight rounds to win the World Heavyweight Championship, beginning an 11-year reign as champion." },
+      { sport: "Cricket", text: "England tour Australia in an Ashes series featuring Don Bradman averaging 90.27 runs, as Australia retains the urn." },
+      { sport: "Horse Racing", text: "War Admiral wins the Triple Crown — the fourth horse to achieve the feat — before losing to Seabiscuit in a famous match race the following year." }
+    ]
+  },
+  {
+    year: 1942,
+    clues: [
+      { sport: "Baseball", text: "The St. Louis Cardinals win 106 games during the regular season and defeat the New York Yankees in the World Series, despite most elite players serving in World War II." },
+      { sport: "American Football", text: "The NFL's Washington franchise wins its second league championship, defeating the Chicago Bears 14–6 in the title game." },
+      { sport: "Golf", text: "The Masters and US Open are cancelled for the remainder of World War II, with Byron Nelson and Ben Hogan both winning other major events." }
+    ]
+  },
+  {
+    year: 1946,
+    clues: [
+      { sport: "Basketball", text: "The Basketball Association of America — the forerunner of the NBA — is founded, with the first game played between the Toronto Huskies and New York Knickerbockers." },
+      { sport: "American Football", text: "The Cleveland Browns win the first AAFC championship, beginning a dynasty that goes undefeated in 1948." },
+      { sport: "Baseball", text: "Ted Williams returns from three years of military service and leads the Boston Red Sox to the World Series, where they lose to the Cardinals in seven games." }
+    ]
+  },
+  {
+    year: 1947,
+    clues: [
+      { sport: "Baseball", text: "Jackie Robinson breaks Major League Baseball's color barrier, debuting for the Brooklyn Dodgers and winning the first-ever Rookie of the Year award." },
+      { sport: "American Football", text: "The Chicago Bears defeat the Philadelphia Eagles 21–14 in the NFL Championship Game, with Sid Luckman at quarterback." },
+      { sport: "Boxing", text: "Rocky Graziano defeats Tony Zale in their second of three brutal middleweight title fights, one of boxing's great trilogies." }
+    ]
+  },
+  {
+    year: 1951,
+    clues: [
+      { sport: "Baseball", text: "Bobby Thomson hits the 'Shot Heard Round the World' — a walk-off three-run homer in the bottom of the ninth to win the NL pennant playoff for the Giants over the Dodgers." },
+      { sport: "Boxing", text: "Sugar Ray Robinson loses his middleweight title to Randy Turpin by decision in London, then wins it back just 64 days later in their rematch." },
+      { sport: "Horse Racing", text: "Citation becomes the first racehorse to earn $1 million in career prize money, winning multiple stakes races across the season." }
+    ]
+  },
+  {
+    year: 1952,
+    clues: [
+      { sport: "Athletics", text: "Emil Zátopek wins the 5,000m, 10,000m and marathon at the Olympics — completing the unprecedented triple — having never previously run a marathon." },
+      { sport: "Boxing", text: "Rocky Marciano knocks out Jersey Joe Walcott in the 13th round to retain the heavyweight title, finishing his career with a perfect 49–0 record in the same era." },
+      { sport: "American Football", text: "The Detroit Lions win their first NFL Championship in 17 years, defeating the Cleveland Browns 17–7." }
+    ]
+  },
+  {
+    year: 1953,
+    clues: [
+      { sport: "Soccer", text: "England suffer their first-ever home defeat to a non-British team, losing 6–3 to Hungary at Wembley in a match that shocks the footballing world." },
+      { sport: "Cricket", text: "England win back the Ashes for the first time since 1933, defeating Australia 1–0 in a five-match series under Len Hutton." },
+      { sport: "American Football", text: "The Detroit Lions win the NFL Championship for the second consecutive year, defeating Cleveland again — this time 17–16." }
+    ]
+  },
+  {
+    year: 1956,
+    clues: [
+      { sport: "Boxing", text: "Floyd Patterson becomes the youngest world heavyweight champion at age 21, knocking out Archie Moore in five rounds to claim the vacant title." },
+      { sport: "Athletics", text: "Bobby Morrow wins three gold medals at the Olympics — the 100m, 200m, and 4x100m relay — becoming the sprint king of his generation." },
+      { sport: "Horse Racing", text: "The Grand National is won by E.S.B. after the race leader Devon Loch dramatically collapses on the run-in just 50 yards from the finish." }
+    ]
+  },
+  {
+    year: 1961,
+    clues: [
+      { sport: "Baseball", text: "Roger Maris hits 61 home runs in a single season, breaking Babe Ruth's 34-year-old record — though the achievement is initially given an asterisk due to the expanded schedule." },
+      { sport: "American Football", text: "The AFL and NFL engage in a fierce bidding war for top college talent, with the Green Bay Packers winning the first of their back-to-back NFL championships." },
+      { sport: "Boxing", text: "Floyd Patterson defeats Ingemar Johansson in their third fight to retain the heavyweight title, ending their trilogy." }
+    ]
+  },
+  {
+    year: 1962,
+    clues: [
+      { sport: "Soccer", text: "Brazil win the FIFA World Cup in Chile for the second consecutive time, with Garrincha carrying the team after Pelé is injured." },
+      { sport: "Basketball", text: "Wilt Chamberlain scores 100 points in a single NBA game for the Philadelphia Warriors against the New York Knicks — a record that still stands." },
+      { sport: "Tennis", text: "Rod Laver wins the Grand Slam — all four major titles in a calendar year — for the first time, at age 23." }
+    ]
+  },
+  {
+    year: 1963,
+    clues: [
+      { sport: "Soccer", text: "AC Milan become the first Italian club to win the European Cup, defeating Benfica 2–1 in the final at Wembley." },
+      { sport: "American Football", text: "The Chicago Bears win the NFL Championship, defeating the New York Giants 14–10 in the last title for the franchise for decades." },
+      { sport: "Athletics", text: "The Sullivan Award — given to America's top amateur athlete — is won by a swimmer for the first time: Don Schollander, who would win four golds the following year." }
+    ]
+  },
+  {
+    year: 1964,
+    clues: [
+      { sport: "Athletics", text: "Abebe Bikila wins the Olympic marathon for a second consecutive time, just six weeks after having his appendix removed." },
+      { sport: "Boxing", text: "Cassius Clay shocks the world by defeating Sonny Liston in six rounds to win the World Heavyweight Championship, then announces he has joined the Nation of Islam and will be known as Muhammad Ali." },
+      { sport: "Baseball", text: "The St. Louis Cardinals defeat the New York Yankees in a seven-game World Series, the last Series the Yankees would reach for over a decade." }
+    ]
+  },
+  {
+    year: 1965,
+    clues: [
+      { sport: "American Football", text: "The AFL's New York Jets sign University of Alabama quarterback Joe Namath for the then-astronomical sum of $427,000, signaling the AFL's ability to compete with the NFL for talent." },
+      { sport: "Boxing", text: "Muhammad Ali knocks out Sonny Liston in the first round of their rematch in what becomes known as the 'phantom punch' bout." },
+      { sport: "Baseball", text: "Sandy Koufax of the Los Angeles Dodgers posts one of the greatest pitching seasons in history: 26 wins, 382 strikeouts, and a 2.04 ERA, winning the Cy Young Award unanimously." }
+    ]
+  },
+  {
+    year: 1968,
+    clues: [
+      { sport: "Athletics", text: "Bob Beamon shatters the long jump world record at the Olympics by nearly two feet — jumping 8.90m — in a leap so extraordinary commentators coin the term 'Beamonesque.'" },
+      { sport: "Athletics", text: "Tommie Smith and John Carlos raise black-gloved fists on the medal podium at the Olympics in one of sport's most iconic and controversial political moments." },
+      { sport: "Soccer", text: "Manchester United become the first English club to win the European Cup, defeating Benfica 4–1 after extra time with Bobby Charlton scoring twice." }
+    ]
+  },
+  {
+    year: 1970,
+    clues: [
+      { sport: "Soccer", text: "Brazil win the FIFA World Cup in Mexico, becoming the first team to win three World Cups, with Pelé widely considered at his peak." },
+      { sport: "Horse Racing", text: "Nijinsky becomes the last horse to win the English Triple Crown — the 2,000 Guineas, Epsom Derby, and St Leger — a feat not repeated to this day." },
+      { sport: "Basketball", text: "Willis Reed limps onto the court for Game 7 of the NBA Finals despite a torn thigh muscle, inspiring the New York Knicks to beat the Los Angeles Lakers and win their first championship." }
+    ]
+  },
+  {
+    year: 1971,
+    clues: [
+      { sport: "Boxing", text: "Joe Frazier defeats Muhammad Ali by unanimous decision in 'The Fight of the Century' at Madison Square Garden, handing Ali his first professional loss." },
+      { sport: "American Football", text: "The Dallas Cowboys win their first Super Bowl, defeating the Miami Dolphins 24–3 in New Orleans." },
+      { sport: "Basketball", text: "Kareem Abdul-Jabbar — in his second NBA season — wins his first MVP award as the Milwaukee Bucks win the NBA Championship." }
+    ]
+  },
+  {
+    year: 1974,
+    clues: [
+      { sport: "Soccer", text: "West Germany win the FIFA World Cup on home soil, defeating the Netherlands 2–1 in the final despite the Dutch being heavy favorites with Johan Cruyff's Total Football." },
+      { sport: "Boxing", text: "Muhammad Ali knocks out George Foreman in the eighth round of the 'Rumble in the Jungle' in Kinshasa, Zaire, using his famous rope-a-dope strategy." },
+      { sport: "American Football", text: "The Miami Dolphins win their second consecutive Super Bowl, capping a dynasty built around the No-Name Defense and Larry Csonka." }
+    ]
+  },
+  {
+    year: 1977,
+    clues: [
+      { sport: "Soccer", text: "Liverpool win the European Cup for the first time, defeating Borussia Mönchengladbach 3–1 in Rome, beginning an era of English dominance in Europe." },
+      { sport: "Tennis", text: "Virginia Ruzici wins the French Open and Bjorn Borg wins the first of his five consecutive Wimbledon titles." },
+      { sport: "Baseball", text: "Reggie Jackson hits three home runs on three consecutive pitches in Game 6 of the World Series, earning the nickname 'Mr. October' as the Yankees win the championship." }
+    ]
+  },
+  {
+    year: 1979,
+    clues: [
+      { sport: "Basketball", text: "Magic Johnson and Larry Bird face off in the NCAA Championship Game — Michigan State defeating Indiana State — generating record TV ratings and launching one of sport's great rivalries." },
+      { sport: "Baseball", text: "The Pittsburgh Pirates win the World Series, coming back from 3–1 down against the Baltimore Orioles, with Willie Stargell named Series MVP." },
+      { sport: "Boxing", text: "Sugar Ray Leonard wins the WBC welterweight title by stopping Wilfred Benítez with six seconds left in the 15th round." }
+    ]
+  },
+  {
+    year: 1912,
+    clues: [
+      { sport: "Athletics", text: "Jim Thorpe wins both the pentathlon and decathlon at the Olympics, later called 'the greatest athlete in the world' by King Gustav V of Sweden." },
+      { sport: "Soccer", text: "The Olympics football tournament is won by Great Britain for the second consecutive time, defeating Denmark in the final." },
+      { sport: "Tennis", text: "The Davis Cup is won by the British Isles, defeating Australasia in the final in Melbourne." }
+    ]
+  },
+  {
+    year: 1920,
+    clues: [
+      { sport: "Baseball", text: "Babe Ruth is sold by the Boston Red Sox to the New York Yankees for $100,000 — the curse of the Bambino begins." },
+      { sport: "Boxing", text: "The first world title fight broadcast on radio takes place, with Jack Dempsey defending his heavyweight title." },
+      { sport: "Soccer", text: "The first post-WWI Olympics are held, with football won by Belgium on home soil." }
+    ]
+  },
+  {
+    year: 1930,
+    clues: [
+      { sport: "Soccer", text: "The first FIFA World Cup is held in Uruguay, with the host nation defeating Argentina 4–2 in the final in Montevideo." },
+      { sport: "Tennis", text: "Bill Tilden wins the US National Championships for the seventh time, cementing his status as the dominant player of his era." },
+      { sport: "Golf", text: "Bobby Jones completes the 'Grand Slam' — winning all four major golf championships in the same calendar year — then retires from competitive golf." }
+    ]
+  },
+  {
+    year: 1938,
+    clues: [
+      { sport: "Soccer", text: "Italy win the FIFA World Cup in France for the second consecutive time, defeating Hungary 4–2 in the final in Paris." },
+      { sport: "Boxing", text: "Joe Louis avenges his only professional defeat, knocking out Max Schmeling in the first round of their rematch at Yankee Stadium." },
+      { sport: "Tennis", text: "Don Budge becomes the first player to win all four Grand Slam singles titles in the same calendar year." }
+    ]
+  },
+  {
+    year: 1945,
+    clues: [
+      { sport: "Baseball", text: "The Chicago Cubs win the National League pennant for the last time in decades, losing the World Series to the Detroit Tigers in seven games." },
+      { sport: "Soccer", text: "Moscow Dynamo tour Britain, drawing massive crowds in a series of exhibition matches that introduced Soviet football to Western audiences." },
+      { sport: "Horse Racing", text: "Dante wins the Epsom Derby — the race resumes after wartime interruptions, having been run at Newmarket during the war years." }
+    ]
+  },
+  {
+    year: 1948,
+    clues: [
+      { sport: "Athletics", text: "Fanny Blankers-Koen of the Netherlands wins four gold medals at the Olympics, dubbed 'the Flying Housewife' by the press." },
+      { sport: "Horse Racing", text: "Citation wins the Triple Crown, becoming the first horse to earn over $1 million in prize money during his career." },
+      { sport: "Basketball", text: "The Basketball Association of America and the National Basketball League begin merger talks, leading to the formation of the NBA." }
+    ]
+  },
+  {
+    year: 1896,
+    clues: [
+      { sport: "Athletics", text: "The first modern Olympic Games open, with 14 nations competing in events including track and field, wrestling, and gymnastics." },
+      { sport: "Cycling", text: "The first modern Olympic cycling road race is held, covering roughly 87 km — won by a Greek rider." },
+      { sport: "Tennis", text: "Lawn tennis makes its Olympic debut at the Games, with John Pius Boland of Britain winning both the singles and doubles titles." }
+    ]
+  },
+  {
+    year: 1900,
+    clues: [
+      { sport: "Cricket", text: "Cricket appears as an Olympic sport for the only time ever at the Games, with Great Britain defeating France in the sole match played." },
+      { sport: "Golf", text: "Golf is played at the Olympics for the first time at the Olympics, with American Charles Sands winning the men's event." },
+      { sport: "Soccer", text: "Association football makes its Olympic debut at the Games, with Great Britain defeating France 4–0 in the only match of the tournament." }
+    ]
+  },
+  {
+    year: 1908,
+    clues: [
+      { sport: "Marathon", text: "The Olympic marathon is extended to 26 miles and 385 yards to align the finish line with the royal box — establishing the now-standard marathon distance." },
+      { sport: "Figure Skating", text: "Figure skating is contested at a Summer Olympics for the only time in history, at a Summer Olympics for the only time in history." },
+      { sport: "Boxing", text: "Boxing makes its Olympic debut at the Games, with five weight classes contested." }
+    ]
+  },
+  {
+    year: 1919,
+    clues: [
+      { sport: "Baseball", text: "The Chicago White Sox lose the World Series to the Cincinnati Reds in what later becomes known as the 'Black Sox Scandal,' with eight players accused of intentionally throwing games." },
+      { sport: "Horse Racing", text: "Sir Barton becomes the first horse to win the Kentucky Derby, Preakness Stakes, and Belmont Stakes — a feat later named the Triple Crown." },
+      { sport: "Boxing", text: "Jack Dempsey knocks out Jess Willard in three rounds to win the World Heavyweight Championship in Toledo, Ohio." }
+    ]
+  },
+  {
+    year: 1927,
+    clues: [
+      { sport: "Baseball", text: "Babe Ruth hits 60 home runs in a single season, setting a Major League Baseball record that stands for 34 years." },
+      { sport: "Boxing", text: "Gene Tunney defeats Jack Dempsey in the famous 'Long Count' rematch in Chicago, retaining the World Heavyweight title." },
+      { sport: "Tennis", text: "Helen Wills Moody wins the first of her eight Wimbledon singles titles." }
+    ]
+  },
+  {
+    year: 1936,
+    clues: [
+      { sport: "Athletics", text: "Jesse Owens wins four gold medals at the Olympics — in the 100m, 200m, long jump, and 4×100m relay — in front of Adolf Hitler." },
+      { sport: "Baseball", text: "Joe DiMaggio plays his first season with the New York Yankees, hitting .323 with 29 home runs and 125 RBIs." },
+      { sport: "Boxing", text: "Joe Louis suffers his first professional loss, knocked out by Max Schmeling in the 12th round at Yankee Stadium." }
+    ]
+  },
+  {
+    year: 1941,
+    clues: [
+      { sport: "Baseball", text: "Joe DiMaggio hits safely in 56 consecutive games, setting an MLB record widely considered the most unbreakable in sports." },
+      { sport: "Baseball", text: "Ted Williams finishes the season hitting .406, becoming the last player in Major League Baseball to bat over .400 for a full season." },
+      { sport: "Boxing", text: "Joe Louis knocks out Billy Conn in the 13th round to retain his heavyweight title after nearly losing to the challenger on points." }
+    ]
+  },
+  {
+    year: 1950,
+    clues: [
+      { sport: "Soccer", text: "The United States shocks England 1–0 at the FIFA World Cup in Brazil in one of the biggest upsets in tournament history." },
+      { sport: "Horse Racing", text: "Calumet Farm's Hill Prince wins the Preakness Stakes and Belmont Stakes but misses the Triple Crown after skipping the Kentucky Derby." },
+      { sport: "Basketball", text: "The NBA integrates for the first time, with the Boston Celtics drafting Chuck Cooper, the first Black player selected in an NBA draft." }
+    ]
+  },
+  {
+    year: 1954,
+    clues: [
+      { sport: "Soccer", text: "West Germany stuns heavily favored Hungary 3–2 in the FIFA World Cup final in Bern, Switzerland — dubbed the 'Miracle of Bern.'" },
+      { sport: "Athletics", text: "Roger Bannister becomes the first person to run a mile in under four minutes, clocking 3:59.4 in Oxford, England." },
+      { sport: "Baseball", text: "Willie Mays makes his legendary over-the-shoulder catch in Game 1 of the World Series against the Cleveland Indians." }
+    ]
+  },
+  {
+    year: 1958,
+    clues: [
+      { sport: "Soccer", text: "A 17-year-old Pelé leads Brazil to their first FIFA World Cup title, scoring twice in the final against Sweden." },
+      { sport: "American Football", text: "The Baltimore Colts defeat the New York Giants 23–17 in overtime in the NFL Championship Game, dubbed 'The Greatest Game Ever Played.'" },
+      { sport: "Tennis", text: "Ashley Cooper wins the Australian Open, French Open, and Wimbledon in the same calendar year." }
+    ]
+  },
+  {
+    year: 1960,
+    clues: [
+      { sport: "Boxing", text: "Cassius Clay — later Muhammad Ali — wins the light heavyweight gold medal at the Olympics at age 18." },
+      { sport: "Athletics", text: "Abebe Bikila of Ethiopia wins the Olympic marathon barefoot, becoming the first sub-Saharan African to win an Olympic gold medal." },
+      { sport: "Baseball", text: "Bill Mazeroski hits a walk-off home run in Game 7 to give the Pittsburgh Pirates the World Series over the New York Yankees." }
+    ]
+  },
+  {
+    year: 1966,
+    clues: [
+      { sport: "Soccer", text: "England wins the FIFA World Cup on home soil, defeating West Germany 4–2 after extra time at Wembley Stadium." },
+      { sport: "American Football", text: "The first AFL–NFL World Championship Game (later known as Super Bowl I) is announced and scheduled; the rival leagues also agree to merge." },
+      { sport: "Basketball", text: "Texas Western (now UTEP) defeats all-white Kentucky 72–65 in the NCAA Championship, with an all-Black starting five — a landmark moment in sports integration." }
+    ]
+  },
+  {
+    year: 1967,
+    clues: [
+      { sport: "American Football", text: "The Green Bay Packers defeat the Dallas Cowboys 21–17 in the 'Ice Bowl,' played in –13°F conditions at Lambeau Field, to advance to Super Bowl II." },
+      { sport: "Boxing", text: "Muhammad Ali refuses induction into the US Army on conscientious objector grounds and is stripped of his heavyweight title." },
+      { sport: "Soccer", text: "Celtic become the first British club to win the European Cup, defeating Inter Milan 2–1 in Lisbon — dubbed the 'Lisbon Lions.'" }
+    ]
+  },
+  {
+    year: 1969,
+    clues: [
+      { sport: "Baseball", text: "The New York Mets, a team that had never finished above ninth place, win the World Series — earning them the nickname the 'Miracle Mets.'" },
+      { sport: "American Football", text: "Joe Namath guarantees a victory for the AFL's New York Jets over the NFL's Baltimore Colts in Super Bowl III — and delivers, 16–7." },
+      { sport: "Tennis", text: "Rod Laver wins all four Grand Slam singles titles in the same calendar year, completing a second career Grand Slam." }
+    ]
+  },
+  {
+    year: 1972,
+    clues: [
+      { sport: "Swimming", text: "Mark Spitz wins seven gold medals at the Olympics, setting a world record in each event — a record that stands until Michael Phelps in 2008." },
+      { sport: "Basketball", text: "The US men's basketball team loses its first-ever Olympic game, controversially falling to the Soviet Union in the final seconds of the Games." },
+      { sport: "Athletics", text: "Frank Shorter wins the Olympic marathon at the Olympics, sparking a running boom in the United States." }
+    ]
+  },
+  {
+    year: 1973,
+    clues: [
+      { sport: "Horse Racing", text: "Secretariat wins the Triple Crown, setting track records at all three races — including a Belmont Stakes victory by 31 lengths that still stands." },
+      { sport: "Tennis", text: "Billie Jean King defeats Bobby Riggs in the televised 'Battle of the Sexes' match at the Houston Astrodome, watched by over 90 million people worldwide." },
+      { sport: "American Football", text: "O.J. Simpson rushes for 2,003 yards in a single NFL season, the first player to break the 2,000-yard mark." }
+    ]
+  },
+  {
+    year: 1975,
+    clues: [
+      { sport: "Baseball", text: "Carlton Fisk's twelfth-inning walk-off home run in Game 6 of the World Series, where he waves the ball fair, becomes one of baseball's most iconic moments." },
+      { sport: "Boxing", text: "Muhammad Ali defeats Joe Frazier in the 'Thrilla in Manila,' their brutal third fight, with Frazier's corner stopping it before the 15th round." },
+      { sport: "Tennis", text: "Arthur Ashe becomes the first Black man to win the Wimbledon singles title, defeating the heavily favored Jimmy Connors." }
+    ]
+  },
+  {
+    year: 1976,
+    clues: [
+      { sport: "Gymnastics", text: "Nadia Comaneci scores the first perfect 10.0 in Olympic gymnastics history at the Games, going on to earn seven perfect scores." },
+      { sport: "Athletics", text: "Edwin Moses wins the 400m hurdles gold medal at the Olympics, beginning a streak in which he goes undefeated for nearly 10 years." },
+      { sport: "Basketball", text: "The ABA and NBA merge, with four ABA franchises — the Nets, Nuggets, Pacers, and Spurs — joining the NBA." }
+    ]
+  },
+  {
+    year: 1978,
+    clues: [
+      { sport: "Soccer", text: "Argentina wins the FIFA World Cup on home soil, defeating the Netherlands 3–1 in the final in Buenos Aires." },
+      { sport: "Boxing", text: "Leon Spinks shocks Muhammad Ali by decision to win the heavyweight title in only his eighth professional fight, before Ali reclaims it later the same year." },
+      { sport: "Horse Racing", text: "Affirmed wins the Triple Crown, edging rival Alydar in all three races — the last horse to date to accomplish the feat." }
+    ]
+  },
+  {
+    year: 1980,
+    clues: [
+      { sport: "Ice Hockey", text: "The US men's hockey team pulls off the 'Miracle on Ice,' defeating the Soviet Union 4–3 at the Winter Olympics." },
+      { sport: "Baseball", text: "The Philadelphia Phillies win their first-ever World Series, defeating the Kansas City Royals in six games." },
+      { sport: "Boxing", text: "Sugar Ray Leonard defeats Roberto Durán in their rematch, famous for Durán's sudden 'No más' moment in the eighth round." }
+    ]
+  },
+  {
+    year: 1982,
+    clues: [
+      { sport: "American Football", text: "The San Francisco 49ers defeat the Cincinnati Bengals 26–21 in Super Bowl XVI, the first of Bill Walsh and Joe Montana's four Super Bowl wins together." },
+      { sport: "Soccer", text: "Italy wins the FIFA World Cup in Spain, with Paolo Rossi scoring six goals in the tournament after returning from a match-fixing ban." },
+      { sport: "Basketball", text: "The North Carolina Tar Heels win the NCAA Championship on a last-second jumper by a freshman named Michael Jordan." }
+    ]
+  },
+  {
+    year: 1984,
+    clues: [
+      { sport: "Athletics", text: "Carl Lewis wins four gold medals at the Olympics — 100m, 200m, long jump, and 4×100m relay — mirroring Jesse Owens' 1936 feat." },
+      { sport: "Gymnastics", text: "Mary Lou Retton becomes the first American woman to win the Olympic all-around gymnastics title, at the Games." },
+      { sport: "Basketball", text: "Michael Jordan is drafted third overall by the Chicago Bulls and wins a gold medal at the Olympics." }
+    ]
+  },
+  {
+    year: 1986,
+    clues: [
+      { sport: "Soccer", text: "Diego Maradona scores both his infamous 'Hand of God' goal and the 'Goal of the Century' in a World Cup quarterfinal against England, leading Argentina to the title." },
+      { sport: "Basketball", text: "Len Bias, the second overall NBA draft pick by the Boston Celtics, dies of a cocaine overdose just two days after being selected." },
+      { sport: "Baseball", text: "The New York Mets win the World Series after the Boston Red Sox's Mookie Wilson grounder passes through Bill Buckner's legs in Game 6." }
+    ]
+  },
+  {
+    year: 1988,
+    clues: [
+      { sport: "Athletics", text: "Ben Johnson wins the 100m at the Olympics in a world record 9.79 seconds, but is stripped of his gold medal after testing positive for stanozolol." },
+      { sport: "Tennis", text: "Steffi Graf wins all four Grand Slams and the Olympic gold medal at the Olympics — the only player ever to complete a 'Golden Slam' in a calendar year." },
+      { sport: "Basketball", text: "The Detroit Pistons lose the Eastern Conference Finals to the Boston Celtics after Isiah Thomas scores 25 points in one quarter." }
+    ]
+  },
+  {
+    year: 1990,
+    clues: [
+      { sport: "Soccer", text: "West Germany wins the FIFA World Cup in Italy, defeating Argentina 1–0 in a dull final settled by a disputed penalty kick." },
+      { sport: "Boxing", text: "James 'Buster' Douglas shocks the world by knocking out the previously undefeated Mike Tyson in the tenth round in Tokyo." },
+      { sport: "Tennis", text: "Pete Sampras wins the US Open at age 19, becoming the youngest men's US Open champion in the Open Era." }
+    ]
+  },
+  {
+    year: 1992,
+    clues: [
+      { sport: "Basketball", text: "The US 'Dream Team' — featuring Michael Jordan, Magic Johnson, and Larry Bird — wins Olympic gold, averaging a 44-point margin of victory." },
+      { sport: "Baseball", text: "The Toronto Blue Jays become the first non-US team to win the World Series, defeating the Atlanta Braves in six games." },
+      { sport: "Athletics", text: "Derek Redmond tears his hamstring mid-race at the Olympics and finishes the 400m with help from his father, in one of sport's most emotional moments." }
+    ]
+  },
+  {
+    year: 1994,
+    clues: [
+      { sport: "Soccer", text: "The FIFA World Cup is held on US soil for the first time, with Brazil winning the tournament in a penalty shootout against Italy — the first World Cup final decided by penalties." },
+      { sport: "Hockey", text: "A labor dispute cancels the entire NHL season — the first time a major North American sports league loses a full season to a work stoppage." },
+      { sport: "Figure Skating", text: "Nancy Kerrigan is attacked at the US Figure Skating Championships by an associate of rival Tonya Harding, in a scandal that captivates the nation." }
+    ]
+  },
+  {
+    year: 1995,
+    clues: [
+      { sport: "Rugby", text: "South Africa wins the Rugby World Cup on home soil, with Nelson Mandela presenting the trophy wearing a Springbok jersey in a moment symbolizing national unity." },
+      { sport: "Basketball", text: "Michael Jordan returns from his first retirement mid-season, famously wearing number 45 before switching back to 23." },
+      { sport: "Tennis", text: "Pete Sampras wins Wimbledon for the third consecutive year, defeating Boris Becker in the final." }
+    ]
+  },
+  {
+    year: 1996,
+    clues: [
+      { sport: "Athletics", text: "Michael Johnson wins the 200m and 400m at the Olympics wearing gold shoes, setting a world record of 19.32 seconds in the 200m." },
+      { sport: "Basketball", text: "The Chicago Bulls finish the regular season 72–10, then win the NBA championship — the best regular-season record in NBA history at the time." },
+      { sport: "Soccer", text: "Nigeria wins gold in men's football at the Olympics, defeating Argentina 3–2 in a dramatic semifinal and Brazil in the final." }
+    ]
+  },
+  {
+    year: 1998,
+    clues: [
+      { sport: "Basketball", text: "Michael Jordan hits the game-winning jumper with 5.2 seconds left in Game 6 of the NBA Finals, clinching the Chicago Bulls' sixth championship." },
+      { sport: "Baseball", text: "Mark McGwire and Sammy Sosa engage in a legendary home run chase, with McGwire finishing with 70 homers to break Roger Maris's 37-year-old record." },
+      { sport: "Soccer", text: "France wins the FIFA World Cup on home soil, defeating Brazil 3–0 in the final at the Stade de France, with Zinedine Zidane scoring twice." }
+    ]
+  },
+  {
+    year: 2000,
+    clues: [
+      { sport: "Athletics", text: "Cathy Freeman wins the 400m at the Olympics, carrying the weight of a nation as an Aboriginal Australian athlete lighting the Olympic torch." },
+      { sport: "Swimming", text: "Ian Thorpe wins three gold medals at the Olympics on home soil, becoming Australia's most decorated Olympian at the time." },
+      { sport: "Basketball", text: "The US Men's Basketball team wins gold at the Olympics, but their unimpressive play signals the end of Dream Team dominance." }
+    ]
+  },
+  {
+    year: 2001,
+    clues: [
+      { sport: "Baseball", text: "The Arizona Diamondbacks defeat the New York Yankees in seven games in the World Series, with Luis Gonzalez's walk-off single in Game 7." },
+      { sport: "American Football", text: "The Baltimore Ravens win Super Bowl XXXV, led by linebacker Ray Lewis who wins MVP after the Ravens' defense allows only 23 points across four playoff games." },
+      { sport: "Tennis", text: "Goran Ivanisevic wins Wimbledon as a wildcard, having never won a Grand Slam in 14 previous attempts, in an emotional triumph." }
+    ]
+  },
+  {
+    year: 2002,
+    clues: [
+      { sport: "Soccer", text: "Brazil wins the FIFA World Cup in Japan and South Korea — the first held in Asia — with Ronaldo scoring twice in the final against Germany." },
+      { sport: "Basketball", text: "The Sacramento Kings lose to the Los Angeles Lakers in a controversial Game 6 of the Western Conference Finals, sparking one of basketball's great referee conspiracy debates." },
+      { sport: "American Football", text: "The New England Patriots defeat the heavily favored St. Louis Rams 20–17 in Super Bowl XXXVI, launching a dynasty." }
+    ]
+  },
+  {
+    year: 2004,
+    clues: [
+      { sport: "Basketball", text: "The US Men's Olympic Basketball team — stocked with NBA stars — shockingly loses three games and wins only the bronze medal at the Olympics." },
+      { sport: "Baseball", text: "The Boston Red Sox win the World Series for the first time since 1918, completing a historic comeback from 3–0 down against the New York Yankees in the ALCS." },
+      { sport: "Formula 1", text: "Michael Schumacher wins his seventh and final Formula 1 World Drivers' Championship, finishing 148 points clear of Rubens Barrichello." }
+    ]
+  },
+  {
+    year: 2006,
+    clues: [
+      { sport: "Soccer", text: "Italy wins the FIFA World Cup in Germany, with Zinedine Zidane infamously headbutting Marco Materazzi in the final before France lose on penalties." },
+      { sport: "Basketball", text: "Dwyane Wade leads the Miami Heat to their first NBA Championship, winning Finals MVP after averaging 34.7 points per game in the series." },
+      { sport: "Baseball", text: "The St. Louis Cardinals win the World Series despite finishing the regular season with the lowest winning percentage of any World Series champion." }
+    ]
+  },
+  {
+    year: 2007,
+    clues: [
+      { sport: "American Football", text: "The New England Patriots complete the first perfect regular season (16–0) in NFL history — though they later lose in the Super Bowl." },
+      { sport: "Tennis", text: "Roger Federer wins all three Grand Slams he enters (Australian, Wimbledon, US Open) and finishes the year ranked world number one for the fifth straight time." },
+      { sport: "Basketball", text: "LeBron James single-handedly carries the Cleveland Cavaliers to the NBA Finals, scoring 29 of Cleveland's last 30 points in Game 5 of the Eastern Conference Finals." }
+    ]
+  },
+  {
+    year: 2008,
+    clues: [
+      { sport: "Swimming", text: "Michael Phelps wins eight gold medals at the Olympics, breaking Mark Spitz's record of seven golds set in 1972." },
+      { sport: "American Football", text: "The New York Giants stun the undefeated New England Patriots 17–14 in Super Bowl XLII, with David Tyree's 'Helmet Catch' sealing the comeback." },
+      { sport: "Tennis", text: "Rafael Nadal defeats Roger Federer in a Wimbledon final widely considered the greatest tennis match ever played, ending in near-darkness after nearly five hours." }
+    ]
+  },
+  {
+    year: 2009,
+    clues: [
+      { sport: "Athletics", text: "Usain Bolt sets world records in both the 100m (9.58s) and 200m (19.19s) at the World Championships in Berlin — records that still stand." },
+      { sport: "Soccer", text: "Barcelona win a historic treble — La Liga, Copa del Rey, and the Champions League — under Pep Guardiola, capping one of football's greatest seasons." },
+      { sport: "Golf", text: "Tiger Woods undergoes knee surgery and misses most of the season; Angel Cabrera wins the Masters and Y.E. Yang shocks Woods at the PGA Championship." }
+    ]
+  },
+  {
+    year: 2010,
+    clues: [
+      { sport: "Soccer", text: "Spain wins the FIFA World Cup in South Africa — the first held on African soil — defeating the Netherlands 1–0 after extra time with an Andrés Iniesta goal." },
+      { sport: "Basketball", text: "LeBron James announces 'The Decision' on live television, choosing to take his talents to the Miami Heat, joining Dwyane Wade and Chris Bosh." },
+      { sport: "American Football", text: "The New Orleans Saints win Super Bowl XLIV, their first championship in franchise history, lifting a city still recovering from Hurricane Katrina." }
+    ]
+  },
+  {
+    year: 2011,
+    clues: [
+      { sport: "Basketball", text: "Dirk Nowitzki and the Dallas Mavericks defeat LeBron James and the Miami Heat in six games to win the NBA Championship." },
+      { sport: "Rugby", text: "New Zealand wins the Rugby World Cup on home soil, defeating France 8–7 in a nail-biting final in Auckland." },
+      { sport: "American Football", text: "The Green Bay Packers defeat the Pittsburgh Steelers 31–25 in Super Bowl XLV, with Aaron Rodgers named MVP." }
+    ]
+  },
+  {
+    year: 2012,
+    clues: [
+      { sport: "Athletics", text: "Usain Bolt becomes the first man to successfully defend his 100m and 200m Olympic titles, winning both at a Summer Olympics for the only time in history." },
+      { sport: "Tennis", text: "Andy Murray wins the US Open and Olympic gold, ending Britain's 76-year wait for a male Grand Slam singles champion." },
+      { sport: "Soccer", text: "Chelsea win the UEFA Champions League, beating Bayern Munich on penalties in their own stadium — one of football's great upsets." }
+    ]
+  },
+  {
+    year: 2013,
+    clues: [
+      { sport: "Basketball", text: "Ray Allen's corner three-pointer with 5 seconds left forces overtime in Game 6 of the NBA Finals, leading to the Miami Heat's second consecutive championship." },
+      { sport: "Baseball", text: "The Boston Red Sox win the World Series at Fenway Park for the first time since 1918, in a season that began just months after the Boston Marathon bombing." },
+      { sport: "Tennis", text: "Andy Murray wins Wimbledon, becoming the first British man to win the tournament since Fred Perry in 1936." }
+    ]
+  },
+  {
+    year: 2015,
+    clues: [
+      { sport: "American Football", text: "Malcolm Butler intercepts Russell Wilson at the goal line in the final seconds to give the New England Patriots a 28–24 victory over the Seattle Seahawks in Super Bowl XLIX." },
+      { sport: "Basketball", text: "The Golden State Warriors win their first NBA title in 40 years, defeating the Cleveland Cavaliers in six games with Stephen Curry named Finals MVP." },
+      { sport: "Soccer", text: "Women's World Cup: The US defeats Japan 5–2 in the final, the most-watched soccer game ever on American television." }
+    ]
+  },
+  {
+    year: 2016,
+    clues: [
+      { sport: "Basketball", text: "The Cleveland Cavaliers win the NBA Championship, coming back from 3–1 down against the Golden State Warriors to give Cleveland its first major sports title in 52 years." },
+      { sport: "Soccer", text: "Leicester City wins the English Premier League title at odds of 5000-to-1, in one of the greatest sporting upsets of all time." },
+      { sport: "Swimming", text: "Michael Phelps competes in his fifth and final Olympics at the Olympics, winning five gold medals and bringing his career total to 28 Olympic medals." }
+    ]
+  },
+  {
+    year: 2017,
+    clues: [
+      { sport: "American Football", text: "The New England Patriots overcome a 28–3 deficit in the third quarter to defeat the Atlanta Falcons 34–28 in overtime — the largest Super Bowl comeback ever." },
+      { sport: "Basketball", text: "Kevin Durant joins the Golden State Warriors and wins his first NBA Championship and Finals MVP, defeating LeBron James and the Cavaliers." },
+      { sport: "Baseball", text: "The Houston Astros win the World Series for the first time, defeating the Los Angeles Dodgers in seven games — just two years after a catastrophic flood." }
+    ]
+  },
+  {
+    year: 2018,
+    clues: [
+      { sport: "Soccer", text: "France wins the FIFA World Cup in Russia, defeating Croatia 4–2 in the final, with teenage star Kylian Mbappé becoming only the second teenager after Pelé to score in a World Cup final." },
+      { sport: "Basketball", text: "LeBron James delivers one of the all-time clutch playoff moments, chasing down Jayson Tatum for a block in Game 7 of the Eastern Conference Finals." },
+      { sport: "Tennis", text: "Naomi Osaka defeats Serena Williams in a controversial US Open final marred by three code violations against Williams." }
+    ]
+  },
+  {
+    year: 2019,
+    clues: [
+      { sport: "Basketball", text: "The Toronto Raptors win their first ever NBA Championship, defeating the Golden State Warriors in six games — the first non-US team to win the title." },
+      { sport: "Soccer", text: "Liverpool FC win the UEFA Champions League, defeating Tottenham Hotspur 2–0 in Madrid." },
+      { sport: "Cricket", text: "England win the Cricket World Cup for the first time, beating New Zealand on boundary countback after the Super Over tied." }
+    ]
+  },
+  {
+    year: 2020,
+    clues: [
+      { sport: "Basketball", text: "The Los Angeles Lakers win the NBA Championship in the Orlando 'Bubble,' with LeBron James winning his fourth title and fourth Finals MVP." },
+      { sport: "Baseball", text: "The Los Angeles Dodgers win the World Series in the shortened 60-game pandemic season, their first title since 1988." },
+      { sport: "Tennis", text: "Iga Swiatek wins the French Open at just 19, the first Polish player to win a Grand Slam singles title." }
+    ]
+  },
+  {
+    year: 2021,
+    clues: [
+      { sport: "Basketball", text: "The Milwaukee Bucks win the NBA Championship — their first in 50 years — with Giannis Antetokounmpo scoring 50 points in the clinching Game 6." },
+      { sport: "Soccer", text: "Italy win the UEFA European Championship, defeating England in a penalty shootout at Wembley after the match finishes 1–1." },
+      { sport: "Athletics", text: "Allyson Felix becomes the most decorated American track and field athlete in Olympic history at the Games, surpassing Carl Lewis." }
+    ]
+  },
+  {
+    year: 2022,
+    clues: [
+      { sport: "Soccer", text: "Argentina win the FIFA World Cup in Qatar, with Lionel Messi scoring in the final before winning on penalties against France in one of the greatest finals ever." },
+      { sport: "Basketball", text: "The Golden State Warriors win their fourth NBA title in eight years, with Stephen Curry finally winning Finals MVP." },
+      { sport: "Tennis", text: "Carlos Alcaraz wins the US Open at 19 years old, becoming the youngest player to be ranked world number one in ATP history." }
+    ]
+  },
+  {
+    year: 2023,
+    clues: [
+      { sport: "Basketball", text: "Nikola Jokić and the Denver Nuggets win the NBA Championship for the first time in franchise history, sweeping the Miami Heat in the Finals." },
+      { sport: "Rugby", text: "South Africa win the Rugby World Cup in France for a record fourth time, defeating New Zealand 12–11 in a tense final in Paris." },
+      { sport: "Tennis", text: "Carlos Alcaraz defeats Novak Djokovic in a five-set Wimbledon final to claim his second Grand Slam title." }
+    ]
+  }
+];
+
+const MAX_GUESSES = 4;
+let currentIdx = 0;
+let guesses = [];
+let solved = false;
+let order = [];
+let stats = { played: 0, won: 0, streak: 0, totalGuesses: 0 };
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  // Re-shuffle until no two adjacent puzzles are within 3 years of each other
+  for (let attempt = 0; attempt < 200; attempt++) {
+    let bad = false;
+    for (let i = 0; i < a.length - 1; i++) {
+      if (Math.abs(PUZZLES[a[i]].year - PUZZLES[a[i+1]].year) <= 3) {
+        // swap a[i+1] with a random later position
+        const j = i + 1 + Math.floor(Math.random() * (a.length - i - 1));
+        [a[i+1], a[j]] = [a[j], a[i+1]];
+        bad = true;
+      }
+    }
+    if (!bad) break;
+  }
+  return a;
+}
+
+function getTier(diff) {
+  if (diff <= 2)   return { cls: 't-yellow', emoji: '🟡', label: '1–2 years off' };
+  if (diff <= 10)  return { cls: 't-orange', emoji: '🟠', label: '3–10 years off' };
+  if (diff <= 40)  return { cls: 't-red',    emoji: '🔴', label: '11–40 years off' };
+  if (diff <= 200) return { cls: 't-brown',  emoji: '🟤', label: '41–200 years off' };
+  return               { cls: 't-black',  emoji: '⚫', label: '200+ years off' };
+}
+
+function init() {
+  try {
+    const saved = localStorage.getItem('syStats');
+    if (saved) stats = JSON.parse(saved);
+  } catch(e) {}
+  order = shuffle([...Array(PUZZLES.length).keys()]);
+  currentIdx = 0;
+  loadPuzzle();
+  updateStats();
+}
+
+function saveStats() {
+  try { localStorage.setItem('syStats', JSON.stringify(stats)); } catch(e) {}
+}
+
+function updateStats() {
+  document.getElementById('statPlayed').textContent = stats.played;
+  document.getElementById('statWon').textContent = stats.won;
+  document.getElementById('statStreak').textContent = stats.streak;
+  document.getElementById('statAvg').textContent = stats.won > 0
+    ? (stats.totalGuesses / stats.won).toFixed(1) : '—';
+}
+
+function loadPuzzle() {
+  guesses = [];
+  solved = false;
+  const puzzle = PUZZLES[order[currentIdx % order.length]];
+
+  document.getElementById('clues').innerHTML = puzzle.clues.map((c, i) =>
+    `<div class="clue-card">
+      <span class="clue-num">Clue ${i+1}</span>
+      <div class="clue-body">
+        <div class="clue-text">${c.text}</div>
+        <div class="clue-sport">${c.sport}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  renderDots();
+  document.getElementById('history').innerHTML = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('guessArea').style.display = '';
+  document.getElementById('resultCard').className = 'result-card';
+  document.getElementById('revealCard').className = 'reveal-card';
+  const inp = document.getElementById('yearInput');
+  inp.value = '';
+  inp.min = 1850;
+  inp.max = 2024;
+  inp.disabled = false;
+  document.getElementById('guessBtn').disabled = false;
+  inp.focus();
+}
+
+function renderDots() {
+  document.getElementById('dots').innerHTML = Array.from({length: MAX_GUESSES}, (_, i) =>
+    `<div class="dot ${i < guesses.length ? (solved && i === guesses.length - 1 ? 'correct' : 'used') : ''}"></div>`
+  ).join('');
+}
+
+function submitGuess() {
+  const input = document.getElementById('yearInput');
+  const val = parseInt(input.value);
+  if (!val || val < 1850 || val > 2024) {
+    showFeedback('Enter a year between 1850 and 2024.', 't-orange');
+    return;
+  }
+  const puzzle = PUZZLES[order[currentIdx % order.length]];
+  const diff = Math.abs(val - puzzle.year);
+  guesses.push({ val, diff });
+
+  const pill = document.createElement('span');
+  const pillTier = getTier(diff);
+  pill.className = 'pill ' + pillTier.cls;
+  pill.textContent = val;
+  document.getElementById('history').appendChild(pill);
+
+  if (diff === 0) {
+    solved = true;
+    renderDots();
+    stats.played++;
+    stats.won++;
+    stats.streak++;
+    stats.totalGuesses += guesses.length;
+    saveStats();
+    updateStats();
+    showResult(puzzle.year, guesses.length);
+    return;
+  }
+
+  renderDots();
+
+  if (guesses.length >= MAX_GUESSES) {
+    stats.played++;
+    stats.streak = 0;
+    saveStats();
+    updateStats();
+    revealAnswer(puzzle.year);
+    return;
+  }
+
+  const tier = getTier(diff);
+  showFeedback(`${tier.emoji} ${tier.label}`, tier.cls);
+  input.value = '';
+  input.focus();
+}
+
+function showFeedback(msg, cls) {
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.className = 'feedback show ' + cls;
+}
+
+function showResult(year, attempts) {
+  document.getElementById('guessArea').style.display = 'none';
+  document.getElementById('feedback').className = 'feedback';
+  const msgs = ['Unbelievable! First try!', 'Incredible sports knowledge!', 'Got there!', 'Just in time!'];
+  document.getElementById('resultYear').textContent = year;
+  document.getElementById('resultMsg').textContent = msgs[Math.min(attempts - 1, msgs.length - 1)];
+  document.getElementById('resultAttempts').textContent = attempts === 1 ? '1 guess' : `${attempts} guesses`;
+  document.getElementById('resultCard').className = 'result-card show';
+}
+
+function revealAnswer(year) {
+  document.getElementById('guessArea').style.display = 'none';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('revealYear').textContent = year;
+  document.getElementById('revealCard').className = 'reveal-card show';
+}
+
+function giveUp() {
+  const puzzle = PUZZLES[order[currentIdx % order.length]];
+  stats.played++;
+  stats.streak = 0;
+  saveStats();
+  updateStats();
+  revealAnswer(puzzle.year);
+}
+
+function nextPuzzle() {
+  currentIdx++;
+  loadPuzzle();
+}
+
+document.getElementById('yearInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitGuess();
+});
+
+init();
+</script>
+</body>
+</html>
